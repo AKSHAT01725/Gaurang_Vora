@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pendrive Data Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 text-white min-h-screen flex items-center justify-center p-6">
+  <div class="w-full max-w-4xl bg-gray-850 rounded-2xl shadow-2xl p-8 space-y-6">
+    <h1 class="text-3xl font-extrabold text-center text-blue-400 drop-shadow-sm">📁 Pendrive Data Tracker</h1>
+
+    <!-- Input Form -->
+    <div class="grid md:grid-cols-2 gap-4">
+      <input type="date" id="date" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      <input type="text" id="pendriveName" placeholder="Pendrive Name" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      <input type="text" id="senderName" placeholder="Sender Name" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      <input type="text" id="takerName" placeholder="Taker Name" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      <input type="text" id="receiverName" placeholder="Receiver Name" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      <div class="flex gap-4 col-span-full justify-end">
+        <button onclick="addRecord()" class="bg-blue-600 hover:bg-blue-700 transition-all px-6 py-2 rounded-lg font-medium shadow-md">➕ Add</button>
+        <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 transition-all px-6 py-2 rounded-lg font-medium shadow-md">⬇ Export</button>
+      </div>
+    </div>
+
+    <!-- Records Table -->
+    <div class="overflow-x-auto rounded-lg shadow-lg border border-gray-700">
+      <table class="w-full text-sm text-left text-gray-300">
+        <thead class="text-xs uppercase bg-gray-700 text-gray-300">
+          <tr>
+            <th class="px-4 py-3">Date</th>
+            <th class="px-4 py-3">Pendrive</th>
+            <th class="px-4 py-3">Sender</th>
+            <th class="px-4 py-3">Taker</th>
+            <th class="px-4 py-3">Receiver</th>
+            <th class="px-4 py-3 text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody id="recordsBody" class="bg-gray-800 divide-y divide-gray-700"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', loadRecords);
+
+    function addRecord() {
+      const date = document.getElementById('date').value;
+      const pendriveName = document.getElementById('pendriveName').value;
+      const senderName = document.getElementById('senderName').value;
+      const takerName = document.getElementById('takerName').value;
+      const receiverName = document.getElementById('receiverName').value;
+
+      if (!date || !pendriveName || !senderName || !takerName || !receiverName) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      const record = { date, pendriveName, senderName, takerName, receiverName };
+      saveRecord(record);
+      refreshTable();
+      clearForm();
+    }
+
+    function saveRecord(record) {
+      let records = JSON.parse(localStorage.getItem('pendriveRecords')) || [];
+      records.push(record);
+      localStorage.setItem('pendriveRecords', JSON.stringify(records));
+    }
+
+    function loadRecords() {
+      const records = JSON.parse(localStorage.getItem('pendriveRecords')) || [];
+      const tableBody = document.getElementById('recordsBody');
+      tableBody.innerHTML = '';
+      records.forEach((record, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="px-4 py-2">${record.date}</td>
+          <td class="px-4 py-2">${record.pendriveName}</td>
+          <td class="px-4 py-2">${record.senderName}</td>
+          <td class="px-4 py-2">${record.takerName}</td>
+          <td class="px-4 py-2">${record.receiverName}</td>
+          <td class="px-4 py-2 text-center">
+            <button onclick="removeRecord(${index})" class="bg-red-600 hover:bg-red-700 transition-all px-3 py-1 rounded font-medium">🗑️</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    function removeRecord(index) {
+      let records = JSON.parse(localStorage.getItem('pendriveRecords')) || [];
+      records.splice(index, 1);
+      localStorage.setItem('pendriveRecords', JSON.stringify(records));
+      refreshTable();
+    }
+
+    function refreshTable() {
+      loadRecords();
+    }
+
+    function clearForm() {
+      ['date', 'pendriveName', 'senderName', 'takerName', 'receiverName'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+    }
+
+    function exportToExcel() {
+      const records = JSON.parse(localStorage.getItem('pendriveRecords')) || [];
+      if (records.length === 0) {
+        alert('No records to export.');
+        return;
+      }
+
+      const worksheetData = records.map(record => ({
+        'Date': record.date,
+        'Pendrive Name': record.pendriveName,
+        'Sender Name': record.senderName,
+        'Taker Name': record.takerName,
+        'Receiver Name': record.receiverName
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Pendrive Records');
+      const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `pendrive_data_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
